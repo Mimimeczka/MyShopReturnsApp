@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import Return, Product
 
-# Register your models here.
+admin.site.register(Return)
+admin.site.register(Product)
