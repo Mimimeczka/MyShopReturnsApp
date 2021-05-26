@@ -53,7 +53,7 @@ def change_return_value(my_return, quantity, product_from_response, operation):
     elif operation == 'delete':
         actual_sum_return = previous_sum_return - products_sum
     else:
-        raise Exception('Wrong action')
+        return Response('Wrong action', status=status.HTTP_401_UNAUTHORIZED)
     my_return.sum = actual_sum_return
     my_return.save()
     return my_return
@@ -118,15 +118,15 @@ def delete_product_from_return(request, return_id, product_id):
                 product_to_update.quantity = int(to_update)
                 product_to_update.save()
             elif to_update < 0:
-                raise ValueError('Cannot remove more product than you have')
+                return Response('Cannot remove more product than you have', status=status.HTTP_401_UNAUTHORIZED)
             elif to_update == 0:
                 product_to_update.delete()
             else:
-                raise ValueError('Wrong value')
+                return Response('Wrong value', status=status.HTTP_401_UNAUTHORIZED)
             break
 
     if not access:
-        raise ValueError('Cannot remove product which is not in the return')
+        return Response('Cannot remove product which is not in the return', status=status.HTTP_401_UNAUTHORIZED)
 
     change_return_value(my_return, quantity, product_from_response, 'delete')
 
@@ -134,11 +134,29 @@ def delete_product_from_return(request, return_id, product_id):
     return Response(serializer.data)
 
 
+def change_product_value(product_id, quantity):
+    product_response = requests.get(f'http://127.0.0.1:8001/api/products/{product_id}/')
+    my_product = product_response.json()
+    update_product_quantity = my_product['quantity'] + quantity
+    requests.put(f'http://127.0.0.1:8001/api/products/{product_id}/', data={
+        'name': '',
+        'description': '',
+        'price': '',
+        'quantity': update_product_quantity
+    })
+
+
 @api_view(['GET'])
 def summarize_return(request, return_id):
     my_return = get_object_or_404(Return, id=return_id)
     validator_check_return_is_summarized(my_return)
     validator_check_content_return(return_id)
+
+    return_response = requests.get(f'http://127.0.0.1:8004/api/returns/{return_id}/')
+    product_in_return = return_response.json()
+    for product in product_in_return['products']:
+        change_product_value(product['product_id'], product['quantity'])
+
     my_return.summarized = True
     my_return.save()
     serializer = ReturnSerializer(my_return, many=False)
