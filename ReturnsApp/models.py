@@ -8,7 +8,7 @@ class Return(models.Model):
     summarized = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'Return {self.date}'
+        return f'Return {self.pk}'
 
 
 class Product(models.Model):

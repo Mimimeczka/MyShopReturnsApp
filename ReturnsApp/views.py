@@ -153,8 +153,28 @@ def summarize_return(request, return_id):
     validator_check_content_return(return_id)
 
     return_response = requests.get(f'http://127.0.0.1:8004/api/returns/{return_id}/')
-    product_in_return = return_response.json()
-    for product in product_in_return['products']:
+    my_return_json = return_response.json()
+    product_in_return = my_return_json['products']
+
+    basket_in_return = my_return_json['basket_id']
+    basket_response = requests.get(f'http://127.0.0.1:8002/api/baskets/{basket_in_return}/')
+    basket_json = basket_response.json()
+
+    product_in_basket = basket_json['products']
+
+    fault = True
+    for basket_product in product_in_basket:
+        for return_product in product_in_return:
+            if basket_product['product_id'] == return_product['product_id']:
+                if basket_product['quantity'] < return_product['quantity']:
+                    break
+                fault = False
+        break
+
+    if fault:
+        raise Exception('You can not return this products')
+
+    for product in my_return_json['products']:
         change_product_value(product['product_id'], product['quantity'])
 
     my_return.summarized = True
